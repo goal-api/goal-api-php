@@ -294,6 +294,12 @@ php examples/basic.php
 The live tests skip themselves without a key. Endpoint-by-endpoint coverage of the API
 lives in `tools/sweep.py` in the SDK workspace.
 
-## License
+## Licence
 
-MIT
+MIT. See [LICENSE](LICENSE).
+
+No runtime dependencies: curl and json are PHP extensions, not composer packages, which is
+what keeps `vendor/` at one package. See
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+Security issues: [SECURITY.md](SECURITY.md).
