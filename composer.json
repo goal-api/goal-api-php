@@ -3,7 +3,21 @@
     "description": "PHP SDK for the GOAL API: football fixtures, live scores, standings, stats and odds.",
     "type": "library",
     "license": "MIT",
+    "authors": [
+        {
+            "name": "Devara SARL",
+            "email": "support@goal-api.com",
+            "homepage": "https://goal-api.com",
+            "role": "Maintainer"
+        }
+    ],
     "homepage": "https://goal-api.com",
+    "support": {
+        "docs": "https://goal-api.com/documentation",
+        "issues": "https://github.com/Devara-sarl/goal-api-php/issues",
+        "source": "https://github.com/Devara-sarl/goal-api-php",
+        "email": "support@goal-api.com"
+    },
     "keywords": [
         "goal-api",
         "football",
@@ -15,10 +29,6 @@
         "api-client",
         "sdk"
     ],
-    "support": {
-        "docs": "https://goal-api.com/documentation",
-        "issues": "https://github.com/Devara-sarl/goal-api-php/issues"
-    },
     "require": {
         "php": ">=8.1",
         "ext-curl": "*",
