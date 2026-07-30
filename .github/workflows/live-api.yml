@@ -1,0 +1,24 @@
+name: live-api
+
+# Hits the real API. Needs a GOAL_API_KEY secret on the `live-api` environment; the
+# tests skip without it.
+on:
+  schedule:
+    - cron: '37 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    environment: live-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, json
+          coverage: none
+      - run: composer install --prefer-dist --no-progress
+      - env:
+          GOAL_API_KEY: ${{ secrets.GOAL_API_KEY }}
+        run: vendor/bin/phpunit

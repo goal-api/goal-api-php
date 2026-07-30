@@ -1,0 +1,50 @@
+name: publish
+
+# Packagist builds straight from the git tag, so there is nothing to upload. This
+# validates the tag and nudges Packagist so it does not wait for its next poll.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: packagist
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, json
+          coverage: none
+
+      - name: tag matches the VERSION constant
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/v}"
+          constant=$(grep -oP "public const VERSION = '\K[^']+" src/Transport.php)
+          if [ "$tag" != "$constant" ]; then
+            echo "::error::tag v$tag but src/Transport.php says $constant"
+            exit 1
+          fi
+
+      - run: composer validate --strict
+      - run: composer install --prefer-dist --no-progress
+      - run: vendor/bin/phpunit --exclude-group live
+
+      - name: tell Packagist
+        if: github.event_name == 'push'
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${PACKAGIST_TOKEN:-}" ]; then
+            echo "::warning::PACKAGIST_TOKEN not set; Packagist will pick the tag up on its own schedule"
+            exit 0
+          fi
+          curl -sSf -XPOST -H'content-type:application/json' \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_TOKEN}" \
+            -d "{\"repository\":{\"url\":\"https://github.com/${GITHUB_REPOSITORY}\"}}"
