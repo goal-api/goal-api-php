@@ -1,0 +1,5 @@
+vendor/
+# A library should not pin its consumers' resolutions.
+composer.lock
+.phpunit.cache/
+.phpunit.result.cache
