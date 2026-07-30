@@ -1,0 +1,48 @@
+{
+    "name": "goal-api/sdk",
+    "description": "PHP SDK for the GOAL API: football fixtures, live scores, standings, stats and odds.",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://goal-api.com",
+    "keywords": [
+        "goal-api",
+        "football",
+        "soccer",
+        "live-scores",
+        "fixtures",
+        "standings",
+        "sports-data",
+        "api-client",
+        "sdk"
+    ],
+    "support": {
+        "docs": "https://goal-api.com/documentation",
+        "issues": "https://github.com/Devara-sarl/goal-api-php/issues"
+    },
+    "require": {
+        "php": ">=8.1",
+        "ext-curl": "*",
+        "ext-json": "*",
+        "ext-hash": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "GoalApi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GoalApi\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "lint": "find src tests -name '*.php' -print0 | xargs -0 -n1 php -l"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
