@@ -1,0 +1,11 @@
+# Keep the installed package small: composer fetches a dist archive, which honours these.
+/.github            export-ignore
+/tests              export-ignore
+/examples           export-ignore
+/phpunit.xml        export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/RELEASING.md       export-ignore
+/ENDPOINTS.md       export-ignore
+
+* text=auto eol=lf

@@ -3,13 +3,16 @@
 This package is MIT licensed and has **no runtime dependencies**. `composer require
 goal-api/sdk` adds exactly one package to your `vendor/`.
 
-It needs two PHP extensions, both bundled with essentially every PHP build and declared in
-`composer.json`:
+It needs three PHP extensions, all declared in `composer.json` and all part of PHP itself:
 
-| Requirement | Licence |
-|---|---|
-| `ext-curl` | The PHP Licence (part of PHP itself) |
-| `ext-json` | The PHP Licence (part of PHP itself) |
+| Requirement | Licence | Used for |
+|---|---|---|
+| `ext-curl` | The PHP Licence | The HTTP transport |
+| `ext-json` | The PHP Licence | Request and response bodies |
+| `ext-hash` | The PHP Licence | `hash_hmac` for webhook signatures |
+
+`json` and `hash` cannot be disabled on PHP 7.4 or later, so in practice only `curl` is
+worth checking on an unusual build.
 
 Using curl directly, rather than Guzzle or a PSR-18 client, is what keeps the dependency
 count at zero. That matters for installing into a project that already pins a conflicting
