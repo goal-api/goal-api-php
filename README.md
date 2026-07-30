@@ -203,6 +203,19 @@ $quota->type;        // 'DAILY' | 'MONTHLY'
 
 ## Live updates
 
+> The socket is at `wss://api.goal-api.com/ws`, **not** `/v1/ws`. Only nginx's
+> `location ^~ /ws` carries the `Upgrade` headers; `/v1/ws` is proxied as ordinary HTTP and
+> answers 200 instead of upgrading. The SDK derives the right URL for you.
+>
+> Two services authenticate: the gateway authorises the upgrade from the header or
+> `?wsToken=`, then websocket-service needs an `{"type": "auth", ...}` frame as the very
+> first message. The SDK sends it, and treats `auth_success` as the point the connection is
+> usable.
+>
+> **`subscribe` is capped per plan and the cap can be 0.** `auth_success` reports
+> `maxSubscriptions`; if it is 0 the socket works but no `match_update` will ever arrive.
+> See the known server issue in [`ENDPOINTS.md`](ENDPOINTS.md).
+
 There is no WebSocket client here: PHP-FPM has nowhere to hold a long-lived socket open,
 so a live feed belongs in a worker (ReactPHP, Swoole, Amp) or in your frontend.
 
@@ -279,6 +292,21 @@ For an endpoint this SDK doesn't wrap yet:
 
 ```php
 $data = $goal->request('/some/new/endpoint', ['limit' => 10]);
+```
+
+## Examples
+
+| File | Shows |
+|---|---|
+| [`examples/basic.php`](examples/basic.php) | Status, live fixtures, standings, pagination |
+| [`examples/live-token.php`](examples/live-token.php) | Minting a browser token for live data, with the JS to use it |
+| [`examples/webhook-receiver.php`](examples/webhook-receiver.php) | Verifying a webhook against `php://input` |
+| [`examples/bulk-export.php`](examples/bulk-export.php) | Walking every page of a collection to CSV |
+
+```bash
+GOAL_API_KEY=...        php examples/live-token.php
+GOAL_WEBHOOK_SECRET=... php -S localhost:3100 examples/webhook-receiver.php
+GOAL_API_KEY=...        php examples/bulk-export.php > countries.csv
 ```
 
 ## Testing
