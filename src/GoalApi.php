@@ -196,21 +196,46 @@ final class GoalApi
     /**
      * The live WebSocket endpoint, derived from the base URL.
      *
+     * The path is `/ws` on the host root, not `/v1/ws`. nginx routes the socket with
+     * `location ^~ /ws`, the only location carrying the Upgrade headers; `/v1/ws` falls
+     * into the REST location and silently answers 200 rather than upgrading.
+     *
      * No WebSocket client here: PHP-FPM has nowhere to hold a long-lived socket open, so a
      * live feed belongs in a worker (ReactPHP, Swoole, Amp) or in your frontend. Use this
-     * URL with {@see mintConnectToken()}.
+     * URL with {@see mintConnectToken()} and {@see authMessage()}.
      */
     public function webSocketUrl(): string
     {
-        $base = $this->transport->baseUrl();
-        if (str_starts_with($base, 'https://')) {
-            return 'wss://' . substr($base, 8) . '/ws';
-        }
-        if (str_starts_with($base, 'http://')) {
-            return 'ws://' . substr($base, 7) . '/ws';
+        $parts = parse_url($this->transport->baseUrl());
+        if ($parts === false || !isset($parts['host'])) {
+            return $this->transport->baseUrl() . '/ws';
         }
 
-        return $base . '/ws';
+        $scheme = ($parts['scheme'] ?? 'https') === 'http' ? 'ws' : 'wss';
+        $port = isset($parts['port']) ? ':' . $parts['port'] : '';
+
+        return "{$scheme}://{$parts['host']}{$port}/ws";
+    }
+
+    /**
+     * The frame that must be sent first on a new connection.
+     *
+     * Two services authenticate: the gateway authorises the upgrade from the
+     * `Authorization` header, then websocket-service requires this frame as the very first
+     * message and closes with 4001 if anything else arrives first.
+     *
+     * Pass a token from {@see mintConnectToken()} for a browser, so the key stays server
+     * side; omit it in a PHP worker that already sent the header.
+     *
+     * @return array{type: string, apiKey?: string, token?: string}
+     */
+    public function authMessage(?string $token = null): array
+    {
+        if ($token !== null) {
+            return ['type' => 'auth', 'token' => $token];
+        }
+
+        return ['type' => 'auth', 'apiKey' => $this->transport->apiKey()];
     }
 
     /**

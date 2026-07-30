@@ -155,10 +155,17 @@ final class LiveApiTest extends TestCase
 
     public function testWebSocketUrlAndTokenMinting(): void
     {
-        self::assertSame('wss://api.goal-api.com/v1/ws', $this->goal()->webSocketUrl());
+        // /ws on the host root, not /v1/ws: only nginx's "location ^~ /ws" carries the
+        // Upgrade headers, so /v1/ws answers 200 instead of upgrading.
+        self::assertSame('wss://api.goal-api.com/ws', $this->goal()->webSocketUrl());
 
         $token = $this->goal()->mintConnectToken();
         self::assertNotSame('', $token['token']);
         self::assertGreaterThan(0, $token['expiresIn']);
+
+        // The browser frame carries the token, never the key.
+        $frame = $this->goal()->authMessage($token['token']);
+        self::assertSame(['type' => 'auth', 'token' => $token['token']], $frame);
+        self::assertArrayNotHasKey('apiKey', $frame);
     }
 }

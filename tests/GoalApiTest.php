@@ -375,10 +375,26 @@ final class GoalApiTest extends TestCase
 
     // ------------------------------------------------------------ websocket helpers
 
-    public function testWebSocketUrlDerivesFromTheBaseUrl(): void
+    /**
+     * The socket lives at /ws on the host root. /v1/ws misses nginx's "location ^~ /ws",
+     * the only one with the Upgrade headers, and answers 200 instead of upgrading.
+     */
+    public function testWebSocketUrlIsHostRootNotUnderV1(): void
     {
         $goal = new GoalApi('k', httpHandler: static fn () => [200, [], '{}']);
-        self::assertSame('wss://api.goal-api.com/v1/ws', $goal->webSocketUrl());
+        self::assertSame('wss://api.goal-api.com/ws', $goal->webSocketUrl());
+
+        $local = new GoalApi('k', 'http://localhost:3000/v1', httpHandler: static fn () => [200, [], '{}']);
+        self::assertSame('ws://localhost:3000/ws', $local->webSocketUrl());
+    }
+
+    public function testAuthMessageIsTheFirstFrame(): void
+    {
+        $goal = new GoalApi('secret-key', httpHandler: static fn () => [200, [], '{}']);
+
+        self::assertSame(['type' => 'auth', 'apiKey' => 'secret-key'], $goal->authMessage());
+        self::assertSame(['type' => 'auth', 'token' => 'tok_1'], $goal->authMessage('tok_1'));
+        self::assertArrayNotHasKey('apiKey', $goal->authMessage('tok_1'));
     }
 
     public function testMintConnectTokenReturnsTheToken(): void
