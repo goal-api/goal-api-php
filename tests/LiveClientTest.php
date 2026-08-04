@@ -498,6 +498,63 @@ final class LiveClientTest extends TestCase
         }
     }
 
+    public function testDeliversFramesThatArriveInOneSegment(): void
+    {
+        // The server answers a burst of subscribes together, so several frames land in a
+        // single TCP segment and a single read pulls them all into the client's buffer.
+        // stream_select watches the socket, not that buffer, so a client that selects
+        // before draining reports only the first frame and then blocks until more traffic
+        // arrives. Production caught this; one-frame-per-write tests did not.
+        $url = $this->startServer(function ($conn): void {
+            self::serverRead($conn);
+
+            $batch = '';
+            $batch .= self::frameBytes(Frame::TEXT, json_encode(['type' => 'auth_success']));
+            for ($i = 1; $i <= 5; $i++) {
+                $batch .= self::frameBytes(Frame::TEXT, json_encode([
+                    'type' => 'subscribe_response',
+                    'data' => ['n' => $i],
+                ]));
+            }
+            // One write, so the frames coalesce on the wire.
+            @fwrite($conn, $batch);
+            sleep(10);
+        });
+
+        $live = $this->client($url);
+        $live->connect();
+
+        $seen = [];
+        for ($i = 0; $i < 5; $i++) {
+            $message = $live->receive(2.0);
+            $this->assertIsArray($message, 'frame ' . ($i + 1) . ' of a coalesced batch was not delivered');
+            $seen[] = $message['data']['n'];
+        }
+
+        $this->assertSame([1, 2, 3, 4, 5], $seen);
+
+        $live->close();
+    }
+
+    /**
+     * Build an unmasked server frame as a string, for writing several at once.
+     */
+    private static function frameBytes(int $opcode, string $payload): string
+    {
+        $header = \chr(0x80 | $opcode);
+        $length = \strlen($payload);
+
+        if ($length < 126) {
+            $header .= \chr($length);
+        } elseif ($length <= 0xFFFF) {
+            $header .= \chr(126) . pack('n', $length);
+        } else {
+            $header .= \chr(127) . pack('J', $length);
+        }
+
+        return $header . $payload;
+    }
+
     public function testCloseIsIdempotent(): void
     {
         $url = $this->startServer(function ($conn): void {

@@ -329,7 +329,9 @@ final class LiveClient
 
         while (microtime(true) < $deadline) {
             $remaining = max(0.0, $deadline - microtime(true));
-            if (!$this->waitReadable($remaining)) {
+            // Same reason as in receive(): frames already buffered are invisible to
+            // stream_select, so check the buffer before waiting on the socket.
+            if ($this->buffer === '' && !$this->waitReadable($remaining)) {
                 continue;
             }
 
@@ -400,6 +402,34 @@ final class LiveClient
             $wait = $deadline === null ? $this->pingInterval : max(0.0, $deadline - microtime(true));
             // Never block past the next keepalive, or a quiet feed would look dead.
             $wait = min($wait, $this->pingInterval);
+
+            // Drain our own buffer before waiting on the socket. A single read can pull
+            // several frames in one go -- the server answers five subscribes at once -- and
+            // stream_select watches the socket, not this buffer, so selecting first would
+            // block the full timeout with complete frames already in hand.
+            if ($this->buffer !== '') {
+                try {
+                    $message = $this->readMessage();
+                } catch (WebSocketClosed $closed) {
+                    if (!$this->recover(new ConnectionException("Server closed the connection: {$closed->closeCode} {$closed->reason}"))) {
+                        return null;
+                    }
+                    continue;
+                } catch (ConnectionException $error) {
+                    if (!$this->recover($error)) {
+                        return null;
+                    }
+                    continue;
+                }
+
+                if ($message !== null) {
+                    $this->dispatch($message);
+
+                    return $message;
+                }
+
+                continue;
+            }
 
             if (!$this->waitReadable($wait)) {
                 if ($deadline !== null && microtime(true) >= $deadline) {
