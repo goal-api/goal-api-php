@@ -25,7 +25,7 @@ validates and packs, then stops before uploading.
 Packagist builds from the git tags in this repository, so there is nothing to upload.
 Because `composer.json` sits at the repo root, this works with no extra configuration.
 
-1. Submit `https://github.com/Devara-sarl/goal-api-php` on packagist.org once.
+1. Submit `https://github.com/goal-api/goal-api-php` on packagist.org once.
 2. Either add the GitHub service hook, or set the two secrets below and the workflow
    will call the update API itself.
 

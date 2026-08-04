@@ -14,8 +14,8 @@
     "homepage": "https://goal-api.com",
     "support": {
         "docs": "https://goal-api.com/documentation",
-        "issues": "https://github.com/Devara-sarl/goal-api-php/issues",
-        "source": "https://github.com/Devara-sarl/goal-api-php",
+        "issues": "https://github.com/goal-api/goal-api-php/issues",
+        "source": "https://github.com/goal-api/goal-api-php",
         "email": "support@goal-api.com"
     },
     "keywords": [
