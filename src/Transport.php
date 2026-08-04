@@ -79,6 +79,24 @@ final class Transport
         return rtrim($this->baseUrl, '/');
     }
 
+    /**
+     * The User-Agent sent on every request, and on the live WebSocket handshake.
+     */
+    public function userAgent(): string
+    {
+        return $this->userAgent;
+    }
+
+    /**
+     * Caller-supplied headers, so the WebSocket handshake carries the same ones as REST.
+     *
+     * @return array<string, string>
+     */
+    public function headers(): array
+    {
+        return $this->headers;
+    }
+
     public function rateLimit(): RateLimit
     {
         return $this->rateLimit;

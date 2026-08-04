@@ -1,10 +1,11 @@
 # goal-api/sdk
 
 PHP SDK for the [GOAL API](https://goal-api.com): football fixtures, live scores,
-standings, player stats and odds.
+standings, player stats, odds and real-time match updates over WebSocket.
 
-No framework dependency and no Guzzle. PHP 8.1+ with the curl and json extensions, so it
-installs into a project that already pins a conflicting HTTP client.
+No framework dependency and no Guzzle. PHP 8.1+ with the curl, json and openssl
+extensions, so it installs into a project that already pins a conflicting HTTP client.
+The live WebSocket client needs php-cli, since PHP-FPM cannot hold a socket open.
 
 ```bash
 composer require goal-api/sdk
@@ -216,11 +217,55 @@ $quota->type;        // 'DAILY' | 'MONTHLY'
 > `maxSubscriptions`; if it is 0 the socket works but no `match_update` will ever arrive.
 > See the known server issue in [`ENDPOINTS.md`](ENDPOINTS.md).
 
-There is no WebSocket client here: PHP-FPM has nowhere to hold a long-lived socket open,
-so a live feed belongs in a worker (ReactPHP, Swoole, Amp) or in your frontend.
+There are two ways in, and which one you want depends on where the socket lives.
 
-The intended path is for your backend to hold the API key and hand the browser a
-short-lived, single-use token, so the key never reaches the client:
+### In a php-cli worker
+
+`$goal->live()` is a blocking WebSocket client, written on PHP streams with no
+dependencies. It handles the handshake, auth, keepalives and reconnection.
+
+```php
+$live = $goal->live();
+
+$live->on('match_update', function (array $message) {
+    echo $message['data']['id'], PHP_EOL;
+});
+
+$live->connect();           // returns once auth_success arrives
+$live->subscribe($matchId);
+$live->run();               // blocks
+```
+
+Or drive it yourself, which is what you want inside an existing loop:
+
+```php
+$live->connect();
+$live->subscribe($matchId);
+
+while (($message = $live->receive(timeout: 1.0)) !== null) {
+    // ... your own work between messages
+}
+```
+
+`receive()` returns `null` when the timeout expires with nothing to read, so a quiet feed
+never blocks your loop. Handlers registered with `on()` fire from both `receive()` and
+`run()`. Subscriptions are replayed after a reconnect, because the server does not
+remember a dropped connection's.
+
+**This needs php-cli.** It holds a socket open for as long as you want updates, which is
+exactly what PHP-FPM cannot do — the worker is tied to a request and gets recycled out
+from under the connection. The constructor throws under any SAPI other than `cli`,
+`phpdbg` or `embed`; pass `allowAnySapi: true` only if you know yours can hold a
+long-lived socket (Swoole, RoadRunner, a custom embed).
+
+Options: `autoReconnect`, `maxReconnectAttempts`, `pingInterval`, `authTimeout`,
+`readTimeout`, `connectTimeout`, `streamContext`, `connectToken`, `url`.
+
+### From a browser
+
+If the live data is headed for a frontend anyway, skip the worker. Your backend holds the
+API key and hands the browser a short-lived, single-use token, so the key never reaches
+the client:
 
 ```php
 // GET /api/live-token  (behind your own auth)
@@ -245,13 +290,13 @@ socket.onmessage = (event) => {
 };
 ```
 
-The token is consumed on first connect, so mint one per connection. If you do run a
-long-lived PHP worker, `webSocketUrl()` plus an `Authorization: Bearer` header on the
-handshake works there and needs no token at all.
+The token is consumed on first connect, so mint one per connection.
 
 The server caps client messages at 60/minute and concurrent subscriptions by plan. Only
 `resource: "match"` is supported. Server message types: `match_update`, `auth_success`,
-`status`, `pong`, `server_shutdown`, `error`.
+`status`, `pong`, `server_shutdown`, `error`, `subscribe_response`,
+`unsubscribe_response`, `get_subscriptions_response`. `LiveClient` adds `open` and `close`
+for the transport itself, and `*` receives everything.
 
 ## Webhooks
 
@@ -299,11 +344,13 @@ $data = $goal->request('/some/new/endpoint', ['limit' => 10]);
 | File | Shows |
 |---|---|
 | [`examples/basic.php`](examples/basic.php) | Status, live fixtures, standings, pagination |
+| [`examples/live-worker.php`](examples/live-worker.php) | A php-cli worker on the live socket |
 | [`examples/live-token.php`](examples/live-token.php) | Minting a browser token for live data, with the JS to use it |
 | [`examples/webhook-receiver.php`](examples/webhook-receiver.php) | Verifying a webhook against `php://input` |
 | [`examples/bulk-export.php`](examples/bulk-export.php) | Walking every page of a collection to CSV |
 
 ```bash
+GOAL_API_KEY=...        php examples/live-worker.php
 GOAL_API_KEY=...        php examples/live-token.php
 GOAL_WEBHOOK_SECRET=... php -S localhost:3100 examples/webhook-receiver.php
 GOAL_API_KEY=...        php examples/bulk-export.php > countries.csv

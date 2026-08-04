@@ -6,6 +6,7 @@ namespace GoalApi;
 
 use Generator;
 use GoalApi\Exceptions\AuthenticationException;
+use GoalApi\Live\LiveClient;
 use GoalApi\Resources;
 
 /**
@@ -200,9 +201,8 @@ final class GoalApi
      * `location ^~ /ws`, the only location carrying the Upgrade headers; `/v1/ws` falls
      * into the REST location and silently answers 200 rather than upgrading.
      *
-     * No WebSocket client here: PHP-FPM has nowhere to hold a long-lived socket open, so a
-     * live feed belongs in a worker (ReactPHP, Swoole, Amp) or in your frontend. Use this
-     * URL with {@see mintConnectToken()} and {@see authMessage()}.
+     * {@see live()} is the client. This is the raw URL, for driving the socket yourself or
+     * handing it to a browser alongside {@see mintConnectToken()}.
      */
     public function webSocketUrl(): string
     {
@@ -261,5 +261,52 @@ final class GoalApi
         }
 
         return ['token' => (string) $data['token'], 'expiresIn' => (int) ($data['expiresIn'] ?? 0)];
+    }
+
+    /**
+     * A client for the live match feed.
+     *
+     * Nothing connects until you call {@see LiveClient::connect()}.
+     *
+     * ```php
+     * $live = $goal->live();
+     * $live->on('match_update', fn (array $msg) => print_r($msg['data']));
+     * $live->connect();
+     * $live->subscribe($fixtureId);
+     * $live->run();
+     * ```
+     *
+     * This holds a socket open, which PHP-FPM cannot do; run it under php-cli. Under any
+     * other SAPI the constructor throws unless `allowAnySapi` is set. From a web request,
+     * hand the browser a {@see mintConnectToken()} instead.
+     *
+     * @param array<string, mixed> $streamContext extra stream context options, e.g. custom
+     *                                            `ssl` settings
+     */
+    public function live(
+        ?string $connectToken = null,
+        bool $autoReconnect = true,
+        ?int $maxReconnectAttempts = null,
+        float $pingInterval = 30.0,
+        float $authTimeout = 10.0,
+        float $readTimeout = 90.0,
+        float $connectTimeout = 30.0,
+        array $streamContext = [],
+        bool $allowAnySapi = false,
+        ?string $url = null,
+    ): LiveClient {
+        return new LiveClient(
+            transport: $this->transport,
+            url: $url ?? $this->webSocketUrl(),
+            connectToken: $connectToken,
+            autoReconnect: $autoReconnect,
+            maxReconnectAttempts: $maxReconnectAttempts,
+            pingInterval: $pingInterval,
+            authTimeout: $authTimeout,
+            readTimeout: $readTimeout,
+            connectTimeout: $connectTimeout,
+            streamContext: $streamContext,
+            allowAnySapi: $allowAnySapi,
+        );
     }
 }

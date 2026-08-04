@@ -17,4 +17,8 @@ First release. Covers the full public API surface (13 resource groups, ~70 endpo
 - Rate-limit snapshot from the `X-RateLimit-*` headers.
 - Pagination helpers that terminate on `hasMore: false` or a short page.
 - Webhook signature verification with constant-time comparison and a replay window.
+- A WebSocket client for live match updates: `$goal->live()` handles the handshake, auth,
+  keepalives and reconnection, replaying subscriptions after a reconnect. The RFC 6455
+  codec is implemented on PHP streams, so there are still no dependencies. Needs php-cli,
+  since PHP-FPM cannot hold a long-lived socket open.
 - Percent-encoded path segments.
