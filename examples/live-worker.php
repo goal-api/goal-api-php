@@ -66,14 +66,20 @@ $live->on('auth_success', function (array $message): void {
     }
 });
 
+// A match_update is the provider's live shape, not the REST fixture shape: scores are
+// strings and match_status is the minute. Reading it with the keys /fixtures uses would
+// quietly give you nothing.
 $live->on('match_update', function (array $message): void {
     $data = $message['data'] ?? [];
     printf(
-        "  UPDATE  %s %s v %s %s\n",
-        $data['homeTeam']['name'] ?? '?',
-        $data['homeScore'] ?? '-',
-        $data['awayScore'] ?? '-',
-        $data['awayTeam']['name'] ?? '?'
+        "  UPDATE  %-22s %s-%s %-22s  %s'  (%s)\n",
+        $data['match_hometeam_name'] ?? '?',
+        $data['match_hometeam_score'] ?? '-',
+        $data['match_awayteam_score'] ?? '-',
+        $data['match_awayteam_name'] ?? '?',
+        $data['match_status'] ?? '?',
+        // The fixture id we subscribed with; match_id is the provider's.
+        $data['id'] ?? '?'
     );
 });
 
