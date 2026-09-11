@@ -10,7 +10,7 @@ use GoalApi\Transport;
  * Base for the endpoint groups, one subclass per group.
  *
  * Methods return the decoded envelope (`['success', 'data', 'pagination']`). Rows stay as
- * arrays rather than models -- they are provider-shaped and change.
+ * arrays rather than models -- they follow the API's response shapes and change.
  *
  * Accepted params and limit ceilings: ../ENDPOINTS.md
  */

@@ -45,7 +45,7 @@ final class News extends Resource
     }
 
     /**
-     * One article, by our id or the provider's own news key. 404s when absent.
+     * One article, by our id or the article's apiId. 404s when absent.
      *
      * @return array<string, mixed>
      */
