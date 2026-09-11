@@ -92,6 +92,21 @@ final class GoalApiTest extends TestCase
         self::assertContains('Authorization: Bearer test-key', $this->seen[0]['headers']);
     }
 
+    public function testNewsListHitsNewsAndForwardsItsFilters(): void
+    {
+        $goal = $this->client([self::json(['success' => true, 'data' => []])]);
+
+        // The ids are the news source's, not ours, so they go to the wire untouched.
+        $goal->news->list(['leagueId' => '3', 'teamId' => '150', 'from' => '2026-09-01', 'limit' => 5]);
+
+        self::assertStringStartsWith('https://api.goal-api.com/v1/news?', $this->seen[0]['url']);
+        $query = $this->query();
+        self::assertSame('3', $query['leagueId']);
+        self::assertSame('150', $query['teamId']);
+        self::assertSame('2026-09-01', $query['from']);
+        self::assertSame('5', $query['limit']);
+    }
+
     public function testDropsNullsAndLowercasesBooleans(): void
     {
         $goal = $this->client([self::json(['success' => true, 'data' => []])]);

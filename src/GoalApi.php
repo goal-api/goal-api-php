@@ -63,6 +63,7 @@ final class GoalApi
     public readonly Resources\HeadToHead $h2h;
     public readonly Resources\Results $results;
     public readonly Resources\Videos $videos;
+    public readonly Resources\News $news;
     public readonly Resources\Odds $odds;
     public readonly Resources\Predictions $predictions;
 
@@ -96,6 +97,7 @@ final class GoalApi
         $this->h2h = new Resources\HeadToHead($this->transport);
         $this->results = new Resources\Results($this->transport);
         $this->videos = new Resources\Videos($this->transport);
+        $this->news = new Resources\News($this->transport);
         $this->odds = new Resources\Odds($this->transport);
         $this->predictions = new Resources\Predictions($this->transport);
     }
