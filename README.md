@@ -272,7 +272,7 @@ the client:
 $token = $goal->mintConnectToken();
 
 return response()->json([
-    'url' => $goal->webSocketUrl(),   // wss://api.goal-api.com/v1/ws
+    'url' => $goal->webSocketUrl(),   // wss://api.goal-api.com/ws
     'token' => $token['token'],
     'expiresIn' => $token['expiresIn'],
 ]);
